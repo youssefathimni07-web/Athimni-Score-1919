@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KORA BILLION</title>
+
+<style>
+body{margin:0;background:#0a0a0a;color:#fff;font-family:sans-serif}
+header{background:#000;padding:15px;display:flex;justify-content:space-between}
+.card{background:#111;margin:10px;padding:15px;border-radius:12px}
+button,input{margin:5px;padding:8px;border-radius:8px;border:none}
+.live{color:red}
+</style>
+</head>
+
+<body>
+
+<header>
+<h3>KORA BILLION</h3>
+</header>
+
+<div style="padding:10px">
+<input id="user" placeholder="username">
+<input id="pass" type="password" placeholder="password">
+<button onclick="register()">Register</button>
+<button onclick="login()">Login</button>
+</div>
+
+<input id="search" placeholder="بحث...">
+
+<div id="matches"></div>
+
+<script>
+const API="https://your-backend-url.onrender.com/api";
+let currentUser=null;
+let all=[];
+
+// 🔐 Register
+async function register(){
+await fetch(API+"/register",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+username:user.value,
+password:pass.value
+})
+});
+alert("تم التسجيل");
+}
+
+// 🔓 Login
+async function login(){
+let r=await fetch(API+"/login",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+username:user.value,
+password:pass.value
+})
+});
+let d=await r.json();
+
+if(d.success){
+currentUser=d.user;
+alert("مرحبا "+currentUser.username);
+}else alert("خطأ");
+}
+
+// ⚽ Load Matches
+async function load(){
+let r=await fetch(API+"/matches");
+let d=await r.json();
+all=d.matches;
+render(all);
+}
+
+// 🎨 Render
+function render(data){
+let c=document.getElementById("matches");
+
+c.innerHTML=data.slice(0,20).map(m=>{
+let live=m.status=="IN_PLAY";
+
+return`
+<div class="card">
+<b>${m.homeTeam.name}</b> vs <b>${m.awayTeam.name}</b><br>
+
+<span class="${live?'live':''}">
+${live?'LIVE':m.status}
+</span><br>
+
+${m.score.fullTime.home??0} - ${m.score.fullTime.away??0}
+
+<button onclick="fav('${m.homeTeam.name}')">⭐</button>
+</div>
+`;
+}).join("");
+}
+
+// ⭐ Favorite
+async function fav(team){
+if(!currentUser) return alert("سجل الدخول");
+
+await fetch(API+"/fav",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+username:currentUser.username,
+team
+})
+});
+alert("تمت الإضافة");
+}
+
+// 🔍 Search
+document.getElementById("search").oninput=e=>{
+let v=e.target.value.toLowerCase();
+render(all.filter(m=>
+m.homeTeam.name.toLowerCase().includes(v)||
+m.awayTeam.name.toLowerCase().includes(v)
+));
+};
+
+load();
+setInterval(load,60000);
+</script>
+
+</body>
+</html>
